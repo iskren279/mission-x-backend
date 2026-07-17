@@ -67,42 +67,44 @@ app.get("/dbPing", (req, res) => {
   });
 });
 
+// ****************************This is Iskren's part*************************
+app.get("/debug-db", (req, res) => {
+  pool.query("SELECT DATABASE() AS db", (err, result) => {
+    if (err) return res.send(err);
+    res.send(result);
+  });
+});
+
 //54 to 154 for Fateha
 
 //155 to 255 Rodrigo
 // Unified signup route for both student and teacher
 app.post("/auth/:role/signup", async (req, res) => {
   try {
-    const { role } = req.params; // student or teacher
+    const { role } = req.params;
     const { name, email, password } = req.body;
 
-    // Validation to check if either student or teacher only to avoid SQL injection
     if (role !== "student" && role !== "teacher") {
       return res.status(400).json({ errorMessage: "Invalid role" });
     }
 
-    // Validation to check all required fields are present and not empty
     if (!name?.trim() || !email?.trim() || !password?.trim()) {
-      return res.status(400).json({ errorMessage: "Please fill in all fields" });
+      return res
+        .status(400)
+        .json({ errorMessage: "Please fill in all fields" });
     }
 
-    const table = role; // student or teacher table
-
-    // Promise-based pool so async/await works (callback `pool` is used elsewhere)
+    const table = role;
     const db = pool.promise();
 
-    // Insert user directly (MySQL UNIQUE constraint handles duplicates)
     await db.execute(
       `INSERT INTO ${table} (name, email, password) VALUES (?, ?, ?)`,
-      [name, email, password]
+      [name, email, password],
     );
 
     return res.status(201).json({ message: `${role} created successfully` });
-
-
   } catch (err2) {
-    // MySQL duplicate email error
-    if (err2.code === "ER_DUP_ENTRY") { // ER_DUP_ENTRY is the error code for duplicate email
+    if (err2.code === "ER_DUP_ENTRY") {
       return res.status(400).json({ errorMessage: "Email already exists" });
     }
 
@@ -110,8 +112,6 @@ app.post("/auth/:role/signup", async (req, res) => {
     return res.status(500).json({ errorMessage: "Error saving user" });
   }
 });
-
-
 
 // Unified login route for both student and teacher
 app.post("/auth/:role/login", async (req, res) => {
@@ -127,7 +127,9 @@ app.post("/auth/:role/login", async (req, res) => {
 
     // Validation to check required fields are present and not empty
     if (!email?.trim() || !password?.trim()) {
-      return res.status(400).json({ errorMessage: "Please enter email and password" });
+      return res
+        .status(400)
+        .json({ errorMessage: "Please enter email and password" });
     }
 
     const table = role; // student or teacher table
@@ -136,28 +138,30 @@ app.post("/auth/:role/login", async (req, res) => {
     const db = pool.promise();
 
     // Query to find the user by email
-    const [rows] = await db.execute(
-      `SELECT * FROM ${table} WHERE email = ?`,
-      [email]
-    );
+    const [rows] = await db.execute(`SELECT * FROM ${table} WHERE email = ?`, [
+      email,
+    ]);
 
     // Validation to check if email and password exists in the database
     if (rows.length === 0) {
-      return res.status(401).json({ errorMessage: "Invalid email or password" });
+      return res
+        .status(401)
+        .json({ errorMessage: "Invalid email or password" });
     }
 
     const user = rows[0];
 
     // Compare plain passwords (only for testing)
     if (user.password !== password) {
-      return res.status(401).json({ errorMessage: "Invalid email or password" });
+      return res
+        .status(401)
+        .json({ errorMessage: "Invalid email or password" });
     }
 
     return res.status(200).json({
       message: `${role} logged in successfully`,
-      user
+      user,
     });
-
   } catch (err) {
     // Catch block to handle any database errors
     console.error("Database error:", err);
